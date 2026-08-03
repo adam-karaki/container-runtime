@@ -7,7 +7,11 @@ import (
 	"syscall"
 )
 
-// getExecutablePath resolves the binary path safely across Linux environments and test runners.
+type Config struct {
+	Hostname string
+	Command  []string
+}
+
 func getExecutablePath() (string, error) {
 	if exe, err := os.Executable(); err == nil && exe != "" {
 		return exe, nil
@@ -18,23 +22,25 @@ func getExecutablePath() (string, error) {
 	return "", fmt.Errorf("unable to resolve self executable path")
 }
 
-// RunParent spawns a child re-exec process of myrun that executes the target command.
-func RunParent(command []string) error {
+func RunParent(cfg Config) error {
 	exePath, err := getExecutablePath()
 	if err != nil {
 		return fmt.Errorf("failed to get executable path: %w", err)
 	}
 
-	// Re-exec current binary with the 'child' subcommand
-	args := append([]string{"child"}, command...)
+	args := []string{"child"}
+	if cfg.Hostname != "" {
+		args = append(args, "-hostname", cfg.Hostname)
+	}
+	args = append(args, cfg.Command...)
 
 	cmd := exec.Command(exePath, args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	// Basic SysProcAttr configuration setup for execution
-	cmd.SysProcAttr = &syscall.SysProcAttr{}
+	// Delegates to OS-specific implementation
+	cmd.SysProcAttr = getSysProcAttr()
 
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("failed to start container process: %w", err)
@@ -43,13 +49,15 @@ func RunParent(command []string) error {
 	return cmd.Wait()
 }
 
-// RunChild executes the actual target command inside the spawned process.
-func RunChild(command []string) error {
+func RunChild(hostname string, command []string) error {
+	if err := setContainerHostname(hostname); err != nil {
+		return err
+	}
+
 	binary, err := exec.LookPath(command[0])
 	if err != nil {
 		return fmt.Errorf("command not found %s: %w", command[0], err)
 	}
 
-	// Replace the current child process image with the target command binary
 	return syscall.Exec(binary, command, os.Environ())
 }
