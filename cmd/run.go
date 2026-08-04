@@ -9,16 +9,6 @@ import (
 	"github.com/adam-karaki/container-runtime/pkg/container"
 )
 
-// Config holds CLI flags for myrun.
-type Config struct {
-	Memory   string
-	CPU      string
-	Hostname string
-	RootFS   string
-	Command  []string
-}
-
-// Execute parses command-line arguments and dispatches execution.
 func Execute() error {
 	if len(os.Args) < 2 {
 		return errors.New("usage: myrun run [options] <command> [args...]")
@@ -29,8 +19,7 @@ func Execute() error {
 	case "run":
 		return parseAndRun(os.Args[2:])
 	case "child":
-		// Hidden re-exec entry point used for container child process execution
-		return container.RunChild(os.Args[2:])
+		return parseAndRunChild(os.Args[2:])
 	default:
 		return fmt.Errorf("unknown subcommand: %s", subCmd)
 	}
@@ -39,11 +28,13 @@ func Execute() error {
 func parseAndRun(args []string) error {
 	fs := flag.NewFlagSet("run", flag.ContinueOnError)
 
-	var cfg Config
-	fs.StringVar(&cfg.Memory, "memory", "", "Limit memory usage")
-	fs.StringVar(&cfg.CPU, "cpu", "", "Limit CPU usage")
+	var cfg container.Config
+	var memory, cpu, rootfs string
+
+	fs.StringVar(&memory, "memory", "", "Limit memory usage")
+	fs.StringVar(&cpu, "cpu", "", "Limit CPU usage")
 	fs.StringVar(&cfg.Hostname, "hostname", "", "Container hostname")
-	fs.StringVar(&cfg.RootFS, "rootfs", "", "Path to rootfs")
+	fs.StringVar(&rootfs, "rootfs", "", "Path to rootfs")
 
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -55,5 +46,23 @@ func parseAndRun(args []string) error {
 	}
 	cfg.Command = cmdArgs
 
-	return container.RunParent(cfg.Command)
+	return container.RunParent(cfg)
+}
+
+func parseAndRunChild(args []string) error {
+	fs := flag.NewFlagSet("child", flag.ContinueOnError)
+
+	var hostname string
+	fs.StringVar(&hostname, "hostname", "", "Container hostname")
+
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
+	cmdArgs := fs.Args()
+	if len(cmdArgs) == 0 {
+		return errors.New("child requires command execution arguments")
+	}
+
+	return container.RunChild(hostname, cmdArgs)
 }
