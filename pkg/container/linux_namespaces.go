@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"syscall"
 )
 
@@ -67,4 +68,52 @@ func MountProc() error {
 		return fmt.Errorf("failed to mount /proc: %w", err)
 	}
 	return nil
+}
+func ApplyCgroups(cfg Config, pid int) error {
+	if cfg.Memory == "" && cfg.CPU == "" {
+		return nil
+	}
+
+	cgroupPath := "/sys/fs/cgroup/myrun"
+	if err := os.MkdirAll(cgroupPath, 0755); err != nil {
+		return fmt.Errorf("failed to create cgroup directory: %w", err)
+	}
+
+	// Add process PID to cgroup
+	procsPath := filepath.Join(cgroupPath, "cgroup.procs")
+	if err := os.WriteFile(procsPath, []byte(strconv.Itoa(pid)), 0644); err != nil {
+		return fmt.Errorf("failed to attach pid to cgroup: %w", err)
+	}
+
+	// Memory Limit
+	if cfg.Memory != "" {
+		memPath := filepath.Join(cgroupPath, "memory.max")
+		if err := os.WriteFile(memPath, []byte(cfg.Memory), 0644); err != nil {
+			return fmt.Errorf("failed to write memory limit: %w", err)
+		}
+	}
+
+	// CPU Limit (e.g. "0.5" -> "50000 100000")
+	if cfg.CPU != "" {
+		quota, err := parseCPUQuota(cfg.CPU)
+		if err != nil {
+			return err
+		}
+		cpuPath := filepath.Join(cgroupPath, "cpu.max")
+		if err := os.WriteFile(cpuPath, []byte(quota), 0644); err != nil {
+			return fmt.Errorf("failed to write cpu limit: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func parseCPUQuota(cpu string) (string, error) {
+	val, err := strconv.ParseFloat(cpu, 64)
+	if err != nil {
+		return "", fmt.Errorf("invalid cpu value %q: %w", cpu, err)
+	}
+	period := 100000
+	quota := int(val * float64(period))
+	return fmt.Sprintf("%d %d", quota, period), nil
 }

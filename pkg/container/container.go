@@ -33,7 +33,17 @@ func RunParent(cfg Config) error {
 
 	cmd.SysProcAttr = GetSysProcAttr()
 
-	return cmd.Run()
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("failed to start container process: %w", err)
+	}
+
+	// Apply cgroups to the child PID before waiting
+	if err := ApplyCgroups(cfg, cmd.Process.Pid); err != nil {
+		_ = cmd.Process.Kill()
+		return fmt.Errorf("failed to apply cgroup limits: %w", err)
+	}
+
+	return cmd.Wait()
 }
 
 func RunChild(hostname string, rootfs string, args []string) error {

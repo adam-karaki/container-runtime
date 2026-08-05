@@ -28,3 +28,10 @@ func PivotRoot(rootfs string) error {
 func MountProc() error {
 	return fmt.Errorf("mounting procfs is only supported on Linux")
 }
+
+func ApplyCgroups(cfg Config, pid int) error {
+	if cfg.Memory != "" || cfg.CPU != "" {
+		return fmt.Errorf("cgroups are only supported on Linux")
+	}
+	return nil
+}

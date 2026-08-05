@@ -29,12 +29,11 @@ func parseAndRun(args []string) error {
 	fs := flag.NewFlagSet("run", flag.ContinueOnError)
 
 	var cfg container.Config
-	var memory, cpu, rootfs string
 
-	fs.StringVar(&memory, "memory", "", "Limit memory usage")
-	fs.StringVar(&cpu, "cpu", "", "Limit CPU usage")
+	fs.StringVar(&cfg.Memory, "memory", "", "Limit memory usage (e.g., 100m)")
+	fs.StringVar(&cfg.CPU, "cpu", "", "Limit CPU usage (e.g., 0.5)")
 	fs.StringVar(&cfg.Hostname, "hostname", "", "Container hostname")
-	fs.StringVar(&rootfs, "rootfs", "", "Path to rootfs")
+	fs.StringVar(&cfg.Rootfs, "rootfs", "", "Path to rootfs")
 
 	if err := fs.Parse(args); err != nil {
 		return err
