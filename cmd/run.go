@@ -52,8 +52,9 @@ func parseAndRun(args []string) error {
 func parseAndRunChild(args []string) error {
 	fs := flag.NewFlagSet("child", flag.ContinueOnError)
 
-	var hostname string
+	var hostname, rootfs string
 	fs.StringVar(&hostname, "hostname", "", "Container hostname")
+	fs.StringVar(&rootfs, "rootfs", "", "Path to rootfs")
 
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -64,5 +65,5 @@ func parseAndRunChild(args []string) error {
 		return errors.New("child requires command execution arguments")
 	}
 
-	return container.RunChild(hostname, cmdArgs)
+	return container.RunChild(hostname, rootfs, cmdArgs)
 }

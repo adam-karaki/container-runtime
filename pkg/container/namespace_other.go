@@ -7,13 +7,24 @@ import (
 	"syscall"
 )
 
-func getSysProcAttr() *syscall.SysProcAttr {
+func GetSysProcAttr() *syscall.SysProcAttr {
 	return &syscall.SysProcAttr{}
 }
 
-func setContainerHostname(hostname string) error {
+func SetContainerHostname(hostname string) error {
 	if hostname == "" {
 		return nil
 	}
-	return fmt.Errorf("setting hostname requires Linux kernel primitives")
+	return fmt.Errorf("setting hostname is only supported on Linux")
+}
+
+func PivotRoot(rootfs string) error {
+	if rootfs == "" {
+		return nil
+	}
+	return fmt.Errorf("pivot_root is only supported on Linux")
+}
+
+func MountProc() error {
+	return fmt.Errorf("mounting procfs is only supported on Linux")
 }
