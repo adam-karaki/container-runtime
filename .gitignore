@@ -1,0 +1,26 @@
+# Compiled binaries
+/myrun
+*.exe
+*.exe;
+*.dll
+*.so
+*.dylib
+
+# Test binaries
+*.test
+*.out
+
+# macOS system files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# IDE / Editor settings
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Rootfs directory for upcoming Milestone 4 (Mount isolation)
+/rootfs/
+/alpine-rootfs/
